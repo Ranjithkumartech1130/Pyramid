@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursive Pyramid Explorer - Directory Traversal & Fractal Rendering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #2a2f3e;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: var(--bg-secondary);
+            box-shadow: 0 4px 20px var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .controls {
+            background: var(--bg-secondary);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .input-field {
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--accent), var(--accent-hover));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+            transform: translateY(-2px);
+        }
+
+        .view-toggles {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .toggle-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(45deg, var(--accent), var(--success));
+            border-radius: 2px;
+        }
+
+        /* Directory Tree Styles */
+        .tree-container {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .tree-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tree-container::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        .tree-container::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
+        }
+
+        .tree-node {
+            margin: 8px 0;
+            padding: 12px 15px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            position: relative;
+            animation: slideIn 0.5s ease forwards;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .tree-node:hover {
+            background: var(--bg-primary);
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .tree-node.selected {
+            border-left-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .tree-node.level-0 { border-left-color: #ef4444; }
+        .tree-node.level-1 { border-left-color: #f59e0b; }
+        .tree-node.level-2 { border-left-color: #10b981; }
+        .tree-node.level-3 { border-left-color: #3b82f6; }
+        .tree-node.level-4 { border-left-color: #8b5cf6; }
+
+        .node-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .node-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .node-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .node-detail {
+            text-align: center;
+            padding: 6px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+        }
+
+        .node-detail strong {
+            color: var(--text-primary);
+            display: block;
+        }
+
+        /* Fractal Canvas Styles */
+        .canvas-container {
+            position: relative;
+            height: 500px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: radial-gradient(circle at center, var(--bg-tertiary), var(--bg-primary));
+        }
+
+        #fractalCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .calculation-panel {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .calculation-step {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+            animation: fadeIn 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .formula {
+            font-family: 'Courier New', monospace;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-size: 14px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .result {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .view-toggles {
+                justify-content: center;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .glow {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔺 Recursive Pyramid Explorer</h1>
+        <p>Learn Directory Traversal & Fractal Rendering through Interactive Pyramid Recursion</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="controls-grid">
+                <div class="form-group">
+                    <label>Initial Height</label>
+                    <input type="number" id="initialHeight" class="input-field" value="100" min="10" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Initial Width</label>
+                    <input type="number" id="initialWidth" class="input-field" value="80" min="10" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Initial Length</label>
+                    <input type="number" id="initialLength" class="input-field" value="60" min="10" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Recursion Depth</label>
+                    <input type="number" id="recursionDepth" class="input-field" value="4" min="1" max="6">
+                </div>
+                <div class="form-group">
+                    <label>View Mode</label>
+                    <div class="view-toggles">
+                        <button class="toggle-btn active" data-view="both">Both Views</button>
+                        <button class="toggle-btn" data-view="tree">Tree Only</button>
+                        <button class="toggle-btn" data-view="fractal">Fractal Only</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-primary" onclick="generatePyramid()">🚀 Generate Pyramid</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel" id="treePanel">
+                <h2 class="panel-title">📁 Directory Traversal View</h2>
+                <div class="tree-container" id="treeContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Click "Generate Pyramid" to start exploring!</p>
+                    </div>
+                </div>
+                <div class="stats" id="treeStats" style="display: none;">
+                    <div class="stat-card">
+                        <span class="stat-value" id="totalNodes">0</span>
+                        <div class="stat-label">Total Nodes</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="maxDepth">0</span>
+                        <div class="stat-label">Max Depth</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value" id="selectedLevel">-</span>
+                        <div class="stat-label">Selected Level</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="fractalPanel">
+                <h2 class="panel-title">🎨 Fractal Rendering & Calculator</h2>
+                <div class="canvas-container">
+                    <canvas id="fractalCanvas"></canvas>
+                </div>
+                <div class="calculation-panel" id="calculationPanel">
+                    <div class="loading">
+                        <p>Select a pyramid from the tree view to see calculations!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let pyramidTree = null;
+        let selectedNode = null;
+        let currentViewMode = 'both';
+        let canvas = null;
+        let ctx = null;
+        let animationId = null;
+
+        // Pyramid node class
+        class PyramidNode {
+            constructor(level, height, width, length, parent = null, index = 0) {
+                this.level = level;
+                this.height = height;
+                this.width = width;
+                this.length = length;
+                this.parent = parent;
+                this.children = [];
+                this.index = index;
+                this.id = `pyramid_${level}_${index}`;
+                this.x = 0;
+                this.y = 0;
+                this.isHighlighted = false;
+            }
+
+            // Recursive method to split pyramid into smaller pyramids
+            split(maxDepth) {
+                if (this.level >= maxDepth) return;
+
+                // Each pyramid splits into 4 smaller pyramids (quadrants)
+                const childHeight = this.height / 2;
+                const childWidth = this.width / 2;
+                const childLength = this.length / 2;
+
+                for (let i = 0; i < 4; i++) {
+                    const child = new PyramidNode(
+                        this.level + 1,
+                        childHeight,
+                        childWidth,
+                        childLength,
+                        this,
+                        i
+                    );
+                    this.children.push(child);
+                    child.split(maxDepth); // Recursive call
+                }
+            }
+
+            // Calculate volume using pyramid formula
+            getVolume() {
+                return (1/3) * this.length * this.width * this.height;
+            }
+
+            // Calculate surface area
+            getSurfaceArea() {
+                const baseArea = this.length * this.width;
+                const slantHeight1 = Math.sqrt(this.height**2 + (this.width/2)**2);
+                const slantHeight2 = Math.sqrt(this.height**2 + (this.length/2)**2);
+                const triangleArea1 = 2 * (0.5 * this.length * slantHeight1);
+                const triangleArea2 = 2 * (0.5 * this.width * slantHeight2);
+                return baseArea + triangleArea1 + triangleArea2;
+            }
+
+            // Get all nodes in tree (recursive traversal)
+            getAllNodes() {
+                let nodes = [this];
+                for (let child of this.children) {
+                    nodes = nodes.concat(child.getAllNodes());
+                }
+                return nodes;
+            }
+
+            // Get path from root to this node
+            getPath() {
+                const path = [];
+                let current = this;
+                while (current) {
+                    path.unshift(current);
+                    current = current.parent;
+                }
+                return path;
+            }
+        }
+
+        // Initialize canvas
+        function initCanvas() {
+            canvas = document.getElementById('fractalCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            // Handle canvas clicks
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+
+        // Generate pyramid tree structure
+        function generatePyramid() {
+            const height = parseFloat(document.getElementById('initialHeight').value);
+            const width = parseFloat(document.getElementById('initialWidth').value);
+            const length = parseFloat(document.getElementById('initialLength').value);
+            const depth = parseInt(document.getElementById('recursionDepth').value);
+
+            // Create root pyramid
+            pyramidTree = new PyramidNode(0, height, width, length);
+            
+            // Split recursively
+            pyramidTree.split(depth);
+            
+            // Update displays
+            updateTreeView();
+            updateFractalView();
+            updateStats();
+            
+            // Select root node by default
+            selectNode(pyramidTree);
+        }
+
+        // Update tree view with recursive directory structure
+        function updateTreeView() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            
+            if (!pyramidTree) return;
+            
+            // Recursively render tree nodes
+            renderTreeNode(pyramidTree, container, 0);
+        }
+
+        // Recursively render tree nodes
+        function renderTreeNode(node, container, indent) {
+            const nodeElement = document.createElement('div');
+            nodeElement.className = `tree-node level-${node.level}`;
+            nodeElement.style.marginLeft = `${indent * 20}px`;
+            nodeElement.style.animationDelay = `${node.level * 0.1}s`;
+            
+            const icon = getNodeIcon(node.level);
+            const color = getNodeColor(node.level);
+            
+            nodeElement.innerHTML = `
+                <div class="node-header">
+                    <div class="node-icon" style="background: ${color};">${icon}</div>
+                    <span>Level ${node.level} - Pyramid ${node.index}</span>
+                </div>
+                <div class="node-details">
+                    <div class="node-detail">
+                        <strong>${node.height.toFixed(2)}</strong>
+                        <span>Height</span>
+                    </div>
+                    <div class="node-detail">
+                        <strong>${node.width.toFixed(2)}</strong>
+                        <span>Width</span>
+                    </div>
+                    <div class="node-detail">
+                        <strong>${node.length.toFixed(2)}</strong>
+                        <span>Length</span>
+                    </div>
+                </div>
+            `;
+            
+            nodeElement.addEventListener('click', () => selectNode(node));
+            container.appendChild(nodeElement);
+            
+            // Recursively render children
+            for (let child of node.children) {
+                renderTreeNode(child, container, indent + 1);
+            }
+        }
+
+        // Select a node and update displays
+        function selectNode(node) {
+            selectedNode = node;
+            
+            // Update tree selection
+            document.querySelectorAll('.tree-node').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Find and highlight selected node
+            const allNodes = pyramidTree.getAllNodes();
+            const nodeIndex = allNodes.indexOf(node);
+            const treeNodes = document.querySelectorAll('.tree-node');
+            if (treeNodes[nodeIndex]) {
+                treeNodes[nodeIndex].classList.add('selected');
+                treeNodes[nodeIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            
+            // Update fractal view
+            updateFractalView();
+            
+            // Update calculations
+            updateCalculations();
+            
+            // Update stats
+            document.getElementById('selectedLevel').textContent = node.level;
+        }
+
+        // Update fractal rendering
+        function updateFractalView() {
+            if (!canvas || !ctx || !pyramidTree) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background gradient
+            const gradient = ctx.createRadialGradient(
+                canvas.width/2, canvas.height/2, 0,
+                canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)/2
+            );
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
+            gradient.addColorStop(1, 'rgba(15, 23, 42, 0.3)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate positions for all pyramids
+            calculatePyramidPositions(pyramidTree, canvas.width/2, canvas.height/2, Math.min(canvas.width, canvas.height) * 0.4);
+            
+            // Draw all pyramids recursively
+            drawPyramidRecursive(pyramidTree);
+            
+            // Animate if needed
+            if (selectedNode) {
+                animatePyramid();
+            }
+        }
+
+        // Calculate positions for pyramids in fractal pattern
+        function calculatePyramidPositions(node, centerX, centerY, radius) {
+            node.x = centerX;
+            node.y = centerY;
+            
+            if (node.children.length === 0) return;
+            
+            const childRadius = radius * 0.6;
+            const angleStep = (2 * Math.PI) / node.children.length;
+            
+            node.children.forEach((child, index) => {
+                const angle = index * angleStep;
+                const childX = centerX + Math.cos(angle) * childRadius;
+                const childY = centerY + Math.sin(angle) * childRadius;
+                
+                calculatePyramidPositions(child, childX, childY, childRadius * 0.7);
+            });
+        }
+
+        // Recursively draw pyramids
+        function drawPyramidRecursive(node) {
+            drawPyramid(node);
+            
+            // Draw connections to children
+            if (node.children.length > 0) {
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+                ctx.lineWidth = 1;
+                
+                node.children.forEach(child => {
+                    ctx.beginPath();
+                    ctx.moveTo(node.x, node.y);
+                    ctx.lineTo(child.x, child.y);
+                    ctx.stroke();
+                });
+            }
+            
+            // Recursively draw children
+            node.children.forEach(child => {
+                drawPyramidRecursive(child);
+            });
+        }
+
+        // Draw individual pyramid
+        function drawPyramid(node) {
+            const size = Math.max(10, 50 - node.level * 8);
+            const color = getNodeColor(node.level);
+            const isSelected = node === selectedNode;
+            
+            ctx.save();
+            ctx.translate(node.x, node.y);
+            
+            // Draw pyramid base (rectangle)
+            ctx.fillStyle = isSelected ? color : color + '80';
+            ctx.strokeStyle = isSelected ? '#ffffff' : color;
+            ctx.lineWidth = isSelected ? 3 : 1;
+            
+            const baseWidth = size * (node.width / 100);
+            const baseHeight = size * (node.length / 100);
+            
+            ctx.fillRect(-baseWidth/2, -baseHeight/2, baseWidth, baseHeight);
+            ctx.strokeRect(-baseWidth/2, -baseHeight/2, baseWidth, baseHeight);
+            
+            // Draw pyramid apex (triangle effect)
+            ctx.beginPath();
+            ctx.moveTo(-baseWidth/2, -baseHeight/2);
+            ctx.lineTo(0, -size/2);
+            ctx.lineTo(baseWidth/2, -baseHeight/2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(baseWidth/2, -baseHeight/2);
+            ctx.lineTo(0, -size/2);
+            ctx.lineTo(baseWidth/2, baseHeight/2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Draw level indicator
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(node.level.toString(), 0, 4);
+            
+            // Add glow effect for selected pyramid
+            if (isSelected) {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-baseWidth/2 - 5, -baseHeight/2 - 5, baseWidth + 10, baseHeight + 10);
+            }
+            
+            ctx.restore();
+        }
+
+        // Animate selected pyramid
+        function animatePyramid() {
+            if (!selectedNode) return;
+            
+            const time = Date.now() * 0.003;
+            selectedNode.isHighlighted = Math.sin(time) > 0;
+            
+            // Continue animation
+            animationId = requestAnimationFrame(() => {
+                updateFractalView();
+            });
+        }
+
+        // Handle canvas clicks
+        function handleCanvasClick(event) {
+            if (!pyramidTree) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+            
+            // Find clicked pyramid
+            const allNodes = pyramidTree.getAllNodes();
+            for (let node of allNodes) {
+                const distance = Math.sqrt((clickX - node.x)**2 + (clickY - node.y)**2);
+                const size = Math.max(10, 50 - node.level * 8);
+                
+                if (distance < size) {
+                    selectNode(node);
+                    break;
+                }
+            }
+        }
+
+        // Update calculations panel
+        function updateCalculations() {
+            const panel = document.getElementById('calculationPanel');
+            
+            if (!selectedNode) {
+                panel.innerHTML = '<div class="loading"><p>Select a pyramid to see calculations!</p></div>';
+                return;
+            }
+            
+            const node = selectedNode;
+            const volume = node.getVolume();
+            const surfaceArea = node.getSurfaceArea();
+            
+            panel.innerHTML = `
+                <div class="calculation-step">
+                    <div class="step-title">📐 Pyramid Dimensions (Level ${node.level})</div>
+                    <p>At recursion level ${node.level}, each dimension is halved from the parent pyramid.</p>
+                    <div class="formula">
+                        Height = ${node.parent ? node.parent.height.toFixed(2) + ' ÷ 2' : node.height.toFixed(2)} = ${node.height.toFixed(2)}
+                    </div>
+                    <div class="formula">
+                        Width = ${node.parent ? node.parent.width.toFixed(2) + ' ÷ 2' : node.width.toFixed(2)} = ${node.width.toFixed(2)}
+                    </div>
+                    <div class="formula">
+                        Length = ${node.parent ? node.parent.length.toFixed(2) + ' ÷ 2' : node.length.toFixed(2)} = ${node.length.toFixed(2)}
+                    </div>
+                </div>
+                
+                <div class="calculation-step">
+                    <div class="step-title">📊 Volume Calculation</div>
+                    <p>Volume of a pyramid = (1/3) × base area × height</p>
+                    <div class="formula">V = (1/3) × L × W × H</div>
+                    <div class="formula">V = (1/3) × ${node.length.toFixed(2)} × ${node.width.toFixed(2)} × ${node.height.toFixed(2)}</div>
+                    <div class="formula">V = ${volume.toFixed(4)} cubic units</div>
+                    <div class="result">Volume = ${volume.toFixed(4)} cubic units</div>
+                </div>
+                
+                <div class="calculation-step">
+                    <div class="step-title">📏 Surface Area Calculation</div>
+                    <p>Surface area = base area + 4 triangular faces</p>
+                    <div class="formula">Base Area = L × W = ${node.length.toFixed(2)} × ${node.width.toFixed(2)} = ${(node.length * node.width).toFixed(4)}</div>
+                    <div class="formula">Slant Height₁ = √(H² + (W/2)²) = ${Math.sqrt(node.height**2 + (node.width/2)**2).toFixed(4)}</div>
+                    <div class="formula">Slant Height₂ = √(H² + (L/2)²) = ${Math.sqrt(node.height**2 + (node.length/2)**2).toFixed(4)}</div>
+                    <div class="result">Surface Area = ${surfaceArea.toFixed(4)} square units</div>
+                </div>
+                
+                <div class="calculation-step">
+                    <div class="step-title">🔄 Recursion Path</div>
+                    <p>Path from root to current pyramid:</p>
+                    <div class="formula">${node.getPath().map(n => `Level ${n.level} (${n.height.toFixed(1)}×${n.width.toFixed(1)}×${n.length.toFixed(1)})`).join(' → ')}</div>
+                </div>
+            `;
+            
+            // Animate calculation steps
+            const steps = panel.querySelectorAll('.calculation-step');
+            steps.forEach((step, index) => {
+                step.style.animationDelay = `${index * 0.2}s`;
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            if (!pyramidTree) return;
+            
+            const allNodes = pyramidTree.getAllNodes();
+            const maxDepth = Math.max(...allNodes.map(n => n.level));
+            
+            document.getElementById('totalNodes').textContent = allNodes.length;
+            document.getElementById('maxDepth').textContent = maxDepth;
+            document.getElementById('treeStats').style.display = 'grid';
+        }
+
+        // Get node icon based on level
+        function getNodeIcon(level) {
+            const icons = ['🔺', '🔸', '🔹', '🔶', '🔷', '🔴', '🟡'];
+            return icons[level % icons.length];
+        }
+
+        // Get node color based on level
+        function getNodeColor(level) {
+            const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4'];
+            return colors[level % colors.length];
+        }
+
+        // Handle view mode changes
+        function handleViewModeChange() {
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    currentViewMode = btn.dataset.view;
+                    updateViewMode();
+                });
+            });
+        }
+
+        // Update view mode
+        function updateViewMode() {
+            const treePanel = document.getElementById('treePanel');
+            const fractalPanel = document.getElementById('fractalPanel');
+            const mainContent = document.querySelector('.main-content');
+            
+            switch (currentViewMode) {
+                case 'tree':
+                    treePanel.style.display = 'block';
+                    fractalPanel.style.display = 'none';
+                    mainContent.style.gridTemplateColumns = '1fr';
+                    break;
+                case 'fractal':
+                    treePanel.style.display = 'none';
+                    fractalPanel.style.display = 'block';
+                    mainContent.style.gridTemplateColumns = '1fr';
+                    break;
+                case 'both':
+                default:
+                    treePanel.style.display = 'block';
+                    fractalPanel.style.display = 'block';
+                    mainContent.style.gridTemplateColumns = '1fr 1fr';
+                    break;
+            }
+            
+            // Resize canvas if visible
+            if (currentViewMode !== 'tree') {
+                setTimeout(() => {
+                    initCanvas();
+                    updateFractalView();
+                }, 100);
+            }
+        }
+
+        // Handle window resize
+        function handleResize() {
+            if (canvas && currentViewMode !== 'tree') {
+                initCanvas();
+                updateFractalView();
+            }
+        }
+
+        // Initialize the application
+        function init() {
+            initCanvas();
+            handleViewModeChange();
+            
+            // Add event listeners
+            window.addEventListener('resize', handleResize);
+            
+            // Generate initial pyramid
+            generatePyramid();
+        }
+
+        // Start the application when page loads
+        window.addEventListener('load', init);
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96cfb50b33531ae3',t:'MTc1NDgzMTE1Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
